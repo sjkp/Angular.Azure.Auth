@@ -1,0 +1,26 @@
+﻿<div>
+    <h1>Programmatically create Azure AD Application</h1>
+    <div>
+        <select ng-model="tenant" ng-options="tenant.Tenant for tenant in tenants" ng-change="tenantChange()"></select>
+    </div>
+    <div>
+        <select ng-options="subscription.displayName for subscription in subscriptions" ng-model="subscriptionId" ng-change="subChange()"></select>
+    </div>
+    <div>
+        <h2>Applications</h2>
+        <table>
+            <tr ng-repeat="application in applications">
+                <td>{{application.displayName}}</td>
+                <td>{{application.homepage}}</td>
+                <td>
+                    <ul>
+                        <li ng-repeat="uri in application.identifierUris">{{uri}}</li>
+                    </ul>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div>
+
+    </div>
+</div>

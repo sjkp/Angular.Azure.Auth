@@ -21,6 +21,25 @@
         </table>
     </div>
     <div>
-
+        <h2>Create new application</h2>
+        <form ng-submit="createApplication()">
+            <div>
+                <label>Display Name</label><input ng-model="app.displayName" ng-required="true" />
+            </div>
+            <div>
+                <label>Homepage</label><input type="url" ng-model="app.homePage" ng-required="true" />
+            </div>
+            <div>
+                <label>Identifier Uris</label>
+                <div ng-repeat="uri in app.identifierUris">
+                    <input type="url" ng-model="app.identifierUris[$index]" ng-required="true"/>
+                </div>
+                <button ng-click="addIdentifierUri()">+</button>
+            </div>
+            <div>
+                <label>Password</label><input ng-model="app.password" ng-required="true"/>
+            </div>
+            <button type="submit">Create</button>
+        </form>
     </div>
 </div>

@@ -1,8 +1,22 @@
-﻿namespace Angular.Azure.Auth.Controllers
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using Microsoft.Azure.ActiveDirectory.GraphClient;
+
+namespace Angular.Azure.Auth.Controllers
 {
-    public class CreateRequest
+    public class AADApplicationCreateModel
     {
-        public string graphToken { get; set; }
-        public string managementToken { get; set; }
+        [Required]
+        public string DisplayName { get; set; }
+        [Required]
+        public string[] IdentifierUris { get; set; }
+
+        [Required]
+        public string Homepage { get; set; }
+
+        public IList<RequiredResourceAccess> RequiredResourceAccess { get; set; }
+
+        [Required]
+        public string Password { get; set; }
     }
 }

@@ -84,10 +84,15 @@
             {
                 BaseAddress = new Uri("https://graph.windows.net/")
             };
-            var token = request.Headers.GetValues("graphToken").First();
+            var token = GetToken(request);
             httpclient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", "Bearer " + token);
             httpclient.DefaultRequestHeaders.Add("Accept", "application/json");
             return httpclient;
+        }
+
+        private string GetToken(HttpRequestMessage request)
+        {
+            return request.Headers.GetValues("graphToken").First();
         }
 
         private SubscriptionClient GetSubscriptionClient(HttpRequestMessage request)
@@ -100,70 +105,75 @@
 
 
         [HttpPost]
-        public async Task<IHttpActionResult> Send(CreateRequest token)
+        [Route("api/{tenant}/applications")]
+        public async Task<IHttpActionResult> Create(string tenant, AADApplicationCreateModel model)
         {
-            var creds = new TokenCredentials(token.managementToken);
-            var subscriptionClient = new SubscriptionClient(creds);
-            subscriptionClient.SubscriptionId = Guid.Empty.ToString();
-            var tenants = await subscriptionClient.Tenants.ListAsync();
-            var subscriptions = await subscriptionClient.Subscriptions.ListAsync();
-
-            var client = new Microsoft.Azure.Graph.RBAC.GraphRbacManagementClient(new TokenCredentials(token.graphToken));
-            var subscriptionId = subscriptions.First().SubscriptionId;
-            client.SubscriptionId = subscriptionId;
-            client.TenantID = tenants.First().TenantId;
-
-            var httpclient = new HttpClient();
-
-            httpclient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", token.graphToken);
-            httpclient.DefaultRequestHeaders.Add("Accept", "application/json");
-            var tenantdetails = await httpclient.GetStringAsync("https://graph.windows.net/" + client.TenantID + "/tenantDetails?api-version=1.6");
-
-            var res = await httpclient.GetStringAsync("https://graph.windows.net/sjkpdevs.onmicrosoft.com/applications?api-version=1.6"); //1.42-previewInternal
-
-            var graphClient = new ActiveDirectoryClient(new Uri("https://graph.windows.net/sjkpdevs.onmicrosoft.com"), () =>
+            if (!ModelState.IsValid)
             {
-                return Task.FromResult(token.graphToken);
+                return BadRequest(ModelState);
+            }
+            //var creds = new TokenCredentials(token.managementToken);
+            //var subscriptionClient = new SubscriptionClient(creds);
+            //subscriptionClient.SubscriptionId = Guid.Empty.ToString();
+            //var tenants = await subscriptionClient.Tenants.ListAsync();
+            //var subscriptions = await subscriptionClient.Subscriptions.ListAsync();
+
+            //var client = new Microsoft.Azure.Graph.RBAC.GraphRbacManagementClient(new TokenCredentials(token.graphToken));
+            //var subscriptionId = subscriptions.First().SubscriptionId;
+            //client.SubscriptionId = subscriptionId;
+            //client.TenantID = tenants.First().TenantId;
+
+            //var httpclient = new HttpClient();
+
+            //httpclient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", token.graphToken);
+            //httpclient.DefaultRequestHeaders.Add("Accept", "application/json");
+            //var tenantdetails = await httpclient.GetStringAsync("https://graph.windows.net/" + client.TenantID + "/tenantDetails?api-version=1.6");
+
+            //var res = await httpclient.GetStringAsync("https://graph.windows.net/sjkpdevs.onmicrosoft.com/applications?api-version=1.6"); //1.42-previewInternal
+
+            var graphClient = new ActiveDirectoryClient(new Uri("https://graph.windows.net/"+tenant), () =>
+            {
+                return Task.FromResult(GetToken(Request));
             });
 
             try
-            {                
+            {
                 await graphClient.Applications.AddApplicationAsync(new Microsoft.Azure.ActiveDirectory.GraphClient.Application()
                 {
-                    DisplayName = "Test 12345",
-                    //AppId = "https://ssltest.sjkp.dk",
-                    IdentifierUris = new[] { "https://ssltest.sjkp.dk" },
-                    RequiredResourceAccess = new []
-                    {
-                        new RequiredResourceAccess()
-                        {
-                            ResourceAppId = "797f4846-ba00-4fd7-ba43-dac1f8f63013",
-                            ResourceAccess = new []
-                            {                               
-                                new ResourceAccess()
-                                {
-                                    Id = new Guid("41094075-9dad-400e-a0bd-54e686782033"),
-                                    Type = "Scope"
-                                }
-                            }
-                        }
-                    },
+                    DisplayName = model.DisplayName,
+                    IdentifierUris = model.IdentifierUris,
+                    RequiredResourceAccess = model.RequiredResourceAccess,
+                    //new[]
+                    //{
+                    //    new RequiredResourceAccess()
+                    //    {
+                    //        ResourceAppId = "797f4846-ba00-4fd7-ba43-dac1f8f63013",
+                    //        ResourceAccess = new []
+                    //        {
+                    //            new ResourceAccess()
+                    //            {
+                    //                Id = new Guid("41094075-9dad-400e-a0bd-54e686782033"),
+                    //                Type = "Scope"
+                    //            }
+                    //        }
+                    //    }
+                    //},
                     PasswordCredentials = {new Microsoft.Azure.ActiveDirectory.GraphClient.PasswordCredential()
                 {
                     KeyId = Guid.NewGuid(),
-                    Value = "simon123",
+                    Value = model.Password,
                     EndDate = DateTime.UtcNow.AddYears(2),
                     StartDate = DateTime.UtcNow,
                 } },
-                    Homepage = "https://ssltest.sjkp.dk",
+                    Homepage = model.Homepage
                 });
             }
             catch (Exception ex)
             {
-                
+                return InternalServerError(ex);
             }
 
-            var appQuery = await graphClient.Applications.Where(s => s.DisplayName == "Test 12345").ExecuteAsync();
+            var appQuery = await graphClient.Applications.Where(s => s.DisplayName == model.DisplayName).ExecuteAsync();
 
             var app = appQuery.CurrentPage.First();
 
@@ -176,34 +186,34 @@
                 });
             } catch(Exception ex)
             {
-
+                return InternalServerError(ex);
             }
            
 
 
-            var servicePrincipals = await graphClient.ServicePrincipals.ExecuteAsync();
+            //var servicePrincipals = await graphClient.ServicePrincipals.ExecuteAsync();
 
-            var sp = servicePrincipals.CurrentPage.Where(s => s.AppDisplayName == "Test 12345");
+            //var sp = servicePrincipals.CurrentPage.Where(s => s.AppDisplayName == "Test 12345");
 
-            var objectId = sp.First().ObjectId;
+            //var objectId = sp.First().ObjectId;
 
-            var resourceGroup = new ResourceManagementClient(creds);
-            resourceGroup.SubscriptionId = subscriptionId;
-            var resourceGroupList = resourceGroup.ResourceGroups.List();
+            //var resourceGroup = new ResourceManagementClient(creds);
+            //resourceGroup.SubscriptionId = subscriptionId;
+            //var resourceGroupList = resourceGroup.ResourceGroups.List();
 
-            var armClient = new AuthorizationManagementClient(creds);
-            armClient.SubscriptionId = subscriptionId;
+            //var armClient = new AuthorizationManagementClient(creds);
+            //armClient.SubscriptionId = subscriptionId;
             
-            //https://msdn.microsoft.com/en-us/library/azure/dn906887.aspx 
-            var rolesAssignments = armClient.RoleAssignments.ListForResourceGroup(resourceGroupList.First().Name);
-            var scope = string.Format("/subscriptions/{0}/resourceGroups/{1}", subscriptionId, resourceGroupList.First().Name);
-            var roleDefinitions = armClient.RoleDefinitions.List(scope);
-            armClient.RoleAssignments.Create(scope, Guid.NewGuid().ToString(), new RoleAssignmentProperties()
-            {
+            ////https://msdn.microsoft.com/en-us/library/azure/dn906887.aspx 
+            //var rolesAssignments = armClient.RoleAssignments.ListForResourceGroup(resourceGroupList.First().Name);
+            //var scope = string.Format("/subscriptions/{0}/resourceGroups/{1}", subscriptionId, resourceGroupList.First().Name);
+            //var roleDefinitions = armClient.RoleDefinitions.List(scope);
+            //armClient.RoleAssignments.Create(scope, Guid.NewGuid().ToString(), new RoleAssignmentProperties()
+            //{
                 
-                PrincipalId = objectId,
-                RoleDefinitionId = roleDefinitions.First().Id
-            });
+            //    PrincipalId = objectId,
+            //    RoleDefinitionId = roleDefinitions.First().Id
+            //});
           
 
             return Ok();

@@ -51,6 +51,16 @@ var Angular;
                     this.$scope = $scope;
                     this.$http = $http;
                     this.authService = authService;
+                    this.getApplications = function () {
+                        _this.$http.get('/api/' + _this.$scope.tenant.Tenant + '/applications').then(function (res) {
+                            var value = res.data.value;
+                            console.log(value);
+                            _this.$scope.applications = value;
+                        });
+                    };
+                    $scope.app = {
+                        identifierUris: [''],
+                    };
                     authService.acquireToken('https://graph.windows.net/').then(function (token) {
                         console.log(token);
                         authService.acquireToken('https://management.core.windows.net/').then(function (token2) {
@@ -77,12 +87,16 @@ var Angular;
                         });
                     };
                     $scope.tenantChange = function () {
-                        console.log($scope.tenant);
-                        $http.get('/api/' + $scope.tenant.Tenant + '/applications').then(function (res) {
-                            var value = res.data.value;
-                            console.log(value);
-                            $scope.applications = value;
+                        _this.getApplications();
+                    };
+                    $scope.createApplication = function () {
+                        $http.post('/api/' + $scope.tenant.Tenant + '/applications', $scope.app).then(function (res) {
+                            console.log(res);
+                            _this.getApplications();
                         });
+                    };
+                    $scope.addIdentifierUri = function () {
+                        _this.$scope.app.identifierUris.push('');
                     };
                 }
                 HomeController.$inject = ['$scope', '$http', 'adalAuthenticationService'];
